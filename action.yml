@@ -44,7 +44,7 @@ runs:
       shell: bash
       run: |
         # Extract the coverage percentages for lines, statements, functions, and branches
-        RESULTS_ACTUAL=$(jq '.[0].actual' < ./${{ lighthouse_coverage_path }}/assertion-results.json)
+        RESULTS_ACTUAL=$(jq '.[0].actual' < ./${{ inputs.lighthouse_coverage_path }}/assertion-results.json)
 
         if [ -z  "$RESULTS_ACTUAL" ]; then
             echo "No lighthouse data available"
