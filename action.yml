@@ -39,6 +39,9 @@ runs:
         else
             echo "Results actual needs to be higher. Assigning bronze badge."
         fi
+
+        echo "UNIT_TEST_COVERAGE=$AVERAGE_COVERAGE" >> $GITHUB_ENV
+
     - name: Lighthouse Performance Collection
       if: ${{ inputs.lighthouse_coverage_path }}
       shell: bash
@@ -50,11 +53,85 @@ runs:
             echo "No lighthouse data available"
         else
             echo "Results actual found: $RESULTS_ACTUAL%"
-            if (( $(echo "$RESULTS_ACTUAL > 80" | bc -l) )); then
+            if (( $(echo "$RESULTS_ACTUAL > 0.8" | bc -l) )); then
                 echo "Results actual is above 80%. Assigning gold badge"
-            elif (( $(echo "$RESULTS_ACTUAL > 60" | bc -l) )); then
+            elif (( $(echo "$RESULTS_ACTUAL > 0.6" | bc -l) )); then
                 echo "Results actual is above 60%. Assigning silver badge"
             else
                 echo "Results actual needs to be higher. Assigning bronze badge."
             fi
         fi
+
+        echo "LIGHTHOUSE_SCORE=$RESULTS_ACTUAL" >> $GITHUB_ENV
+    
+    - name: Get all open PRs created by Dependabot
+      shell: bash
+      run: |
+        PRS=$(gh pr list --author dependabot[bot] --state open --json title,url,createdAt --jq '.[] | "\(.title) - \(.url) - Created at: \(.createdAt)"')
+        
+        if [ -z "$PRS" ]; then
+            echo "No open Dependabot PRs found."
+            exit 0
+        else
+            echo "Open Dependabot PRs:"
+            echo "$PRS"
+
+        dependabot_array=()
+        while IFS= read -r line; do
+            dependabot_array+=("\"$line\"")
+            done <<< "$PRS"
+            DEPENDABOT_PRS=$(IFS=,; echo "${dependabot_array[*]}")
+            echo "DEPENDABOT_PRS=[${DEPENDABOT_PRS}]" >> $GITHUB_ENV
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract dependencies from package.json of local repository
+      shell: bash
+      run: |
+        repo_name=$(jq -r '.name' package.json)
+        dependencies=$(jq '.dependencies' package.json | jq tostring)
+        devDependencies=$(jq '.devDependencies' package.json | jq tostring)
+        repository=$(jq '.repository' package.json | jq tostring)
+        echo "repo_name=$repo_name" >> $GITHUB_ENV
+        echo "dependencies=$dependencies" >> $GITHUB_ENV
+        echo "devDependencies=$devDependencies" >> $GITHUB_ENV
+        echo "repository=$repository" >> $GITHUB_ENV
+
+    - name: Create report.json
+      shell: bash
+      run: |
+        echo "{}" > report.json
+        report_json=$(cat report.json)
+
+        dependencies_parsed=$(echo "$dependencies" | jq fromjson)
+        dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
+        repository_parsed=$(echo "$repository" | jq fromjson)
+        dependabot_array_json=[]
+        lighthouse_score_parsed=$(echo "$LIGHTHOUSE_SCORE" | jq fromjson)
+        unit_test_coverage_parsed=$(echo "$UNIT_TEST_COVERAGE" | jq fromjson)
+
+        if [ -z "$DEPENDABOT_PRS" ]; then
+            echo "No dependabot PR data to include"
+        else
+            dependabot_array_json="${DEPENDABOT_PRS}"
+        fi
+
+        # Add a new entry for the repository in report.json
+        updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
+            --argjson dependencies "$dependencies_parsed" \
+            --argjson devDependencies "$dev_dependencies_parsed" \
+            --argjson repository "$repository_parsed" \
+            --argjson dependabot_prs "$dependabot_array_json" \
+            --argjson lighthouse_score "$lighthouse_score_parsed" \
+            --argjson unit_test_coverage "$unit_test_coverage_parsed" \
+            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage }}')
+
+        # Write the updated report back to the report file
+        echo "$updated_report" > report.json
+    
+    - name: Upload report.json
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        name: audired-collection-report
+        path: report.json
