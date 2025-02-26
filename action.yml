@@ -88,7 +88,7 @@ runs:
             echo "DEPENDABOT_PRS=[${DEPENDABOT_PRS}]" >> $GITHUB_ENV
         fi
       env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.github_token }}
 
     - name: Extract dependencies from package.json of local repository
       shell: bash
