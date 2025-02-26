@@ -1,14 +1,18 @@
 name: AudiRED Collection Kit
 description: Toolkit used for AudiRED data collection from oneaudi repositories
 inputs:
-  jest_coverage_path:
-      description: 'path to the top level temp folder where the coverage results can be found'
-      required: false
-      type: string
-  lighthouse_coverage_path:
-      description: 'path to the top level temp folder where the coverage results can be found'
-      required: false
-      type: string
+    github_token:
+        description: 'token used for accessing dependabot data inside repository'
+        required: true
+        type: string
+    jest_coverage_path:
+        description: 'path to the top level temp folder where the coverage results can be found'
+        required: false
+        type: string
+    lighthouse_coverage_path:
+        description: 'path to the top level temp folder where the coverage results can be found'
+        required: false
+        type: string
 
 runs:
   using: "composite"
@@ -84,7 +88,7 @@ runs:
             echo "DEPENDABOT_PRS=[${DEPENDABOT_PRS}]" >> $GITHUB_ENV
         fi
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
 
     - name: Extract dependencies from package.json of local repository
       shell: bash
