@@ -13,10 +13,78 @@ inputs:
         description: 'path to the top level temp folder where the coverage results can be found'
         required: false
         type: string
+    enable_zap_scan:
+        description: 'enable or disable ZAP Full Scan step'
+        required: false
+        type: boolean
+        default: false
+    zap_timeout:
+        description: 'timeout for the ZAP pentest scan'
+        required: false
+        type: string
+        default: '600'
+    zap_blacklist:
+        description: 'comma-separated URLs that should be ignored by the pentester'
+        required: false
+        type: string
+        default: 'audiusa.com,audi.de,audi.ca,mediaservice.audi.com,.*\\.audi\\.com,.*\\.one\\.audi'
+    zap_target:
+        description: 'target URL for the ZAP pentest'
+        required: false
+        type: string
+        default: "127.0.0.1:3000"
+    zap_command:
+        description: 'command to execute before running the ZAP scan'
+        required: false
+        type: string
+        default: 'npm run start'
+    zap_report_name:
+        description: 'name and path of the ZAP security report (without extension)'
+        required: false
+        type: string
+        default: 'zap_report'
 
 runs:
   using: "composite"
   steps:
+    - name: Get Repository Name
+      if: ${{ inputs.enable_zap_scan }}
+      shell: bash
+      run: |
+        REPO_NAME=$(basename $(git rev-parse --show-toplevel) 2>/dev/null || echo "${{ github.event.repository.name }}")
+        echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+
+    - name: Generate Prefixed Report Name
+      if: ${{ inputs.enable_zap_scan }}
+      shell: bash
+      run: |
+        PREFIXED_REPORT_NAME="${REPO_NAME}-${{ inputs.zap_report_name }}"
+        echo "ZAP_REPORT_NAME=$PREFIXED_REPORT_NAME" >> $GITHUB_ENV
+
+    - name: Run Custom Command Before ZAP Scan
+      if: ${{ inputs.enable_zap_scan }}
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.zap_command }}" ]; then
+          echo "Running pre-scan command: ${{ inputs.zap_command }}"
+          eval "${{ inputs.zap_command }}"
+          sleep 10
+        else
+          echo "No pre-scan command provided, skipping."
+        fi
+
+    - name: Run ZAP Full Scan
+      if: ${{ inputs.enable_zap_scan }}
+      uses: zaproxy/action-full-scan@latest
+      with:
+        target: ${{ inputs.zap_target }}
+        allow_issue_writing: false
+        fail_action: false
+        token: ${{ inputs.github_token }}
+        cmd_options: "-a -m ${{ inputs.zap_timeout }} -J ${{ env.ZAP_REPORT_NAME }}.json -w ${{ env.ZAP_REPORT_NAME }}.md"
+        blacklist: ${{ inputs.zap_blacklist }}
+
+
     - name: Unit Test (Jest) Coverage Collection
       shell: bash
       run: |
@@ -161,6 +229,15 @@ runs:
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
+
+    - name: Upload ZAP Reports
+      if: ${{ inputs.enable_zap_scan }}
+      uses: actions/upload-artifact@latest
+      with:
+        name: zap-security-scan-reports
+        path: |
+          ${{ env.ZAP_REPORT_NAME }}.json
+          ${{ env.ZAP_REPORT_NAME }}.md
     
     - name: Upload report.json
       uses: actions/upload-artifact@v4.3.1
