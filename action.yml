@@ -22,12 +22,12 @@ inputs:
         description: 'timeout for the ZAP pentest scan'
         required: false
         type: string
-        default: '600'
+        default: '150'
     zap_blacklist:
         description: 'comma-separated URLs that should be ignored by the pentester'
         required: false
         type: string
-        default: 'audiusa.com,audi.de,audi.ca,mediaservice.audi.com,.*\\.audi\\.com,.*\\.one\\.audi'
+        default: 'audiusa.com,audi.de,audi.ca,mediaservice.audi.com,.*\\.one\\.audi'
     zap_target:
         description: 'target URL for the ZAP pentest'
         required: false
@@ -37,53 +37,50 @@ inputs:
         description: 'command to execute before running the ZAP scan'
         required: false
         type: string
-        default: 'npm run start'
-    zap_report_name:
-        description: 'name and path of the ZAP security report (without extension)'
-        required: false
-        type: string
-        default: 'zap_report'
+        default: 'npm run serve'
 
 runs:
   using: "composite"
   steps:
-    - name: Get Repository Name
-      if: ${{ inputs.enable_zap_scan }}
-      shell: bash
-      run: |
-        REPO_NAME=$(basename $(git rev-parse --show-toplevel) 2>/dev/null || echo "${{ github.event.repository.name }}")
-        echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
 
-    - name: Generate Prefixed Report Name
-      if: ${{ inputs.enable_zap_scan }}
-      shell: bash
+    - name: Check for appstore in package.json
+      id: check_appstore
       run: |
-        PREFIXED_REPORT_NAME="${REPO_NAME}-${{ inputs.zap_report_name }}"
-        echo "ZAP_REPORT_NAME=$PREFIXED_REPORT_NAME" >> $GITHUB_ENV
+        if jq -e '.appstore' package.json >/dev/null 2>&1; then
+          echo "appstore_exists=true" >> "$GITHUB_ENV"
+          echo "::set-output name=appstore_exists::true"
+        else
+          echo "appstore_exists=false" >> "$GITHUB_ENV"
+          echo "::set-output name=appstore_exists::false"
+        fi
+      shell: bash
 
     - name: Run Custom Command Before ZAP Scan
-      if: ${{ inputs.enable_zap_scan }}
+      if: ${{ contains(fromJson(steps.check_appstore.outputs.appstore_exists), 'true') }}
       shell: bash
       run: |
         if [ -n "${{ inputs.zap_command }}" ]; then
           echo "Running pre-scan command: ${{ inputs.zap_command }}"
           eval "${{ inputs.zap_command }}"
-          sleep 10
+          sleep 15
         else
           echo "No pre-scan command provided, skipping."
         fi
+      env:
+        APPSTORE_EXISTS: ${{ steps.check_appstore.outputs.appstore_exists }}
 
     - name: Run ZAP Full Scan
-      if: ${{ inputs.enable_zap_scan }}
+      if: ${{ contains(fromJson(steps.check_appstore.outputs.appstore_exists), 'true') }}
       uses: zaproxy/action-full-scan@latest
       with:
         target: ${{ inputs.zap_target }}
         allow_issue_writing: false
         fail_action: false
         token: ${{ inputs.github_token }}
-        cmd_options: "-a -m ${{ inputs.zap_timeout }} -J ${{ env.ZAP_REPORT_NAME }}.json -w ${{ env.ZAP_REPORT_NAME }}.md"
+        cmd_options: "-a -m ${{ inputs.zap_timeout }} -J zapReport.json"
         blacklist: ${{ inputs.zap_blacklist }}
-
+      env:
+        APPSTORE_EXISTS: ${{ steps.check_appstore.outputs.appstore_exists }}
 
     - name: Unit Test (Jest) Coverage Collection
       shell: bash
@@ -194,10 +191,18 @@ runs:
         dependencies=$(jq '.dependencies' package.json | jq tostring)
         devDependencies=$(jq '.devDependencies' package.json | jq tostring)
         repository=$(jq '.repository' package.json | jq tostring)
+        
+        if [ -f zapReport.json ]; then
+            pentest_report=$(cat zapReport.json)
+        else
+            pentest_report="{}"
+        fi
+
         echo "repo_name=$repo_name" >> $GITHUB_ENV
         echo "dependencies=$dependencies" >> $GITHUB_ENV
         echo "devDependencies=$devDependencies" >> $GITHUB_ENV
         echo "repository=$repository" >> $GITHUB_ENV
+        echo "pentest_report=$pentest_report" >> $GITHUB_ENV
 
     - name: Create report.json
       shell: bash
@@ -225,19 +230,11 @@ runs:
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
-            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage }}')
+            --argjson pentestreport "$pentest_report" \
+            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "pentestreport": $pentestreport }}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
-
-    - name: Upload ZAP Reports
-      if: ${{ inputs.enable_zap_scan }}
-      uses: actions/upload-artifact@latest
-      with:
-        name: zap-security-scan-reports
-        path: |
-          ${{ env.ZAP_REPORT_NAME }}.json
-          ${{ env.ZAP_REPORT_NAME }}.md
     
     - name: Upload report.json
       uses: actions/upload-artifact@v4.3.1
