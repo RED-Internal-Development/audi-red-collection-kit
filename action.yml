@@ -37,7 +37,7 @@ inputs:
         description: 'command to execute before running the ZAP scan'
         required: false
         type: string
-        default: 'npm run serve'
+        default: 'npm run local-api:build && (npm run local-api:start & npm run serve & wait)'
 
 runs:
   using: "composite"
