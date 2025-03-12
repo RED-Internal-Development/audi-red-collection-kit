@@ -119,16 +119,38 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
+    - name: Get Latest Release Notes
+      shell: bash
+      run: |
+        RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt --jq '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}')
+
+        if [ -z "$RELEASE_NOTES" ]; then
+            echo "No releases found."
+            RELEASE_NOTES=null
+        else
+            echo "Latest release notes: $RELEASE_NOTES"
+        fi
+
+        echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+
     - name: Extract dependencies from package.json of local repository
       shell: bash
       run: |
         repo_name=$(jq -r '.name' package.json)
+        repo_version=$(jq -r '.version' package.json)
         dependencies=$(jq '.dependencies' package.json | jq tostring)
         devDependencies=$(jq '.devDependencies' package.json | jq tostring)
+        appstoreData=$(jq '.appstore // {}' package.json | jq tostring)
+        browserlistData=$(jq '.browserslist // {}' package.json | jq tostring)
         repository=$(jq '.repository' package.json | jq tostring)
         echo "repo_name=$repo_name" >> $GITHUB_ENV
+        echo "repo_version=$repo_version" >> $GITHUB_ENV
         echo "dependencies=$dependencies" >> $GITHUB_ENV
         echo "devDependencies=$devDependencies" >> $GITHUB_ENV
+        echo "appstoreData=$appstoreData" >> $GITHUB_ENV
+        echo "browserlistData=$browserlistData" >> $GITHUB_ENV
         echo "repository=$repository" >> $GITHUB_ENV
 
     - name: Create report.json
@@ -150,14 +172,18 @@ runs:
 
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
+            --arg repo_version "$repo_version" \
             --argjson dependencies "$dependencies_parsed" \
             --argjson devDependencies "$dev_dependencies_parsed" \
+            --argjson appstoreData "$appstore_data_parsed" \
+            --argjson browserlistData "$browserlist_data_parsed" \
             --argjson repository "$repository_parsed" \
             --argjson dependabot_prs "$dependabot_array_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
-            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage }}')
+            --argjson release_notes "$release_notes_parsed" \
+            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "appstoreData": $appstoreData", "browserlistData": $browserlistData","repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "release_notes": $release_notes }}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
