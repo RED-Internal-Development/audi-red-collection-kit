@@ -1,18 +1,18 @@
 name: AudiRED Collection Kit
 description: Toolkit used for AudiRED data collection from oneaudi repositories
 inputs:
-    github_token:
-        description: 'token used for accessing dependabot data inside repository'
-        required: true
-        type: string
-    jest_coverage_file_path:
-        description: 'path to the top level temp folder where the coverage results can be found'
-        required: false
-        type: string
-    lighthouse_coverage_file_path:
-        description: 'path to the top level temp folder where the coverage results can be found'
-        required: false
-        type: string
+  github_token:
+    description: "token used for accessing dependabot data inside repository"
+    required: true
+    type: string
+  jest_coverage_file_path:
+    description: "path to the top level temp folder where the coverage results can be found"
+    required: false
+    type: string
+  lighthouse_coverage_file_path:
+    description: "path to the top level temp folder where the coverage results can be found"
+    required: false
+    type: string
 
 runs:
   using: "composite"
@@ -45,7 +45,7 @@ runs:
         fi
 
          echo "UNIT_TEST_COVERAGE=$AVERAGE_COVERAGE" >> $GITHUB_ENV
-    
+
     - name: E2E (Cypress) Coverage Collection
       shell: bash
       run: |
@@ -96,12 +96,12 @@ runs:
         fi
 
         echo "LIGHTHOUSE_SCORE=$RESULTS_ACTUAL" >> $GITHUB_ENV
-    
+
     - name: Get all open PRs created by Dependabot
       shell: bash
       run: |
         PRS=$(gh pr list --author dependabot[bot] --state open --json title,url,createdAt --jq '.[] | "\(.title) - \(.url) - Created at: \(.createdAt)"')
-        
+
         if [ -z "$PRS" ]; then
             echo "No open Dependabot PRs found."
             exit 0
@@ -116,6 +116,24 @@ runs:
             DEPENDABOT_PRS=$(IFS=,; echo "${dependabot_array[*]}")
             echo "DEPENDABOT_PRS=[${DEPENDABOT_PRS}]" >> $GITHUB_ENV
         fi
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+
+    - name: Get all open Dependabot alerts
+      shell: bash
+      run: |
+        ALERTS=$(gh api repos/${{ github.repository }}/dependabot/alerts --jq '[.[] | {package: .security_advisory.affected[0].package.name, severity: .security_advisory.severity, url: .html_url}]')
+
+        if [ -z "$ALERTS" ]; then
+            echo "No open Dependabot alerts found."
+            DEPENDABOT_ALERTS="[]"
+        else
+            echo "Open Dependabot alerts:"
+            echo "$ALERTS"
+            DEPENDABOT_ALERTS=$ALERTS
+        fi
+
+        echo "DEPENDABOT_ALERTS=$DEPENDABOT_ALERTS" >> $GITHUB_ENV
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
@@ -140,28 +158,24 @@ runs:
         dependencies_parsed=$(echo "$dependencies" | jq fromjson)
         dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
         repository_parsed=$(echo "$repository" | jq fromjson)
-        dependabot_array_json=[]
-
-        if [ -z "$DEPENDABOT_PRS" ]; then
-            echo "No dependabot PR data to include"
-        else
-            dependabot_array_json="${DEPENDABOT_PRS}"
-        fi
+        dependabot_prs_json=$(echo "$DEPENDABOT_PRS" | jq fromjson)
+        dependabot_alerts_json=$(echo "$DEPENDABOT_ALERTS" | jq fromjson)
 
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
             --argjson dependencies "$dependencies_parsed" \
             --argjson devDependencies "$dev_dependencies_parsed" \
             --argjson repository "$repository_parsed" \
-            --argjson dependabot_prs "$dependabot_array_json" \
+            --argjson dependabot_prs "$dependabot_prs_json" \
+            --argjson dependabot_alerts "$dependabot_alerts_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
-            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage }}')
+            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "dependabot_alerts": $dependabot_alerts, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage }}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
-    
+
     - name: Upload report.json
       uses: actions/upload-artifact@v4.3.1
       with:
