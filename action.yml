@@ -130,12 +130,11 @@ runs:
 
         if [ -z "$RELEASE_NOTES" ]; then
             echo "No releases found."
-            RELEASE_NOTES=null
+            exit 0
         else
             echo "Latest release notes: $RELEASE_NOTES"
+            echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
         fi
-
-        echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
 
     # - name: Get all open Dependabot alerts
     #   shell: bash
