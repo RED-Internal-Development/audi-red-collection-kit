@@ -137,23 +137,23 @@ runs:
 
         echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
 
-    - name: Get all open Dependabot alerts
-      shell: bash
-      run: |
-        ALERTS=$(gh api repos/${{ github.repository }}/dependabot/alerts --jq '[.[] | {package: .security_advisory.affected[0].package.name, severity: .security_advisory.severity, url: .html_url}]')
+    # - name: Get all open Dependabot alerts
+    #   shell: bash
+    #   run: |
+    #     ALERTS=$(gh api repos/${{ github.repository }}/dependabot/alerts --jq '[.[] | {package: .security_advisory.affected[0].package.name, severity: .security_advisory.severity, url: .html_url}]')
 
-        if [ -z "$ALERTS" ]; then
-            echo "No open Dependabot alerts found."
-            DEPENDABOT_ALERTS="[]"
-        else
-            echo "Open Dependabot alerts:"
-            echo "$ALERTS"
-            DEPENDABOT_ALERTS=$ALERTS
-        fi
+    #     if [ -z "$ALERTS" ]; then
+    #         echo "No open Dependabot alerts found."
+    #         DEPENDABOT_ALERTS="[]"
+    #     else
+    #         echo "Open Dependabot alerts:"
+    #         echo "$ALERTS"
+    #         DEPENDABOT_ALERTS=$ALERTS
+    #     fi
 
-        echo "DEPENDABOT_ALERTS=$DEPENDABOT_ALERTS" >> $GITHUB_ENV
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
+    #     echo "DEPENDABOT_ALERTS=$DEPENDABOT_ALERTS" >> $GITHUB_ENV
+    #   env:
+    #     GH_TOKEN: ${{ inputs.github_token }}
 
     - name: Extract dependencies from package.json of local repository
       shell: bash
@@ -182,24 +182,23 @@ runs:
         dependencies_parsed=$(echo "$dependencies" | jq fromjson)
         dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
         repository_parsed=$(echo "$repository" | jq fromjson)
-        dependabot_prs_json=$(echo "$DEPENDABOT_PRS" | jq fromjson)
-        dependabot_alerts_json=$(echo "$DEPENDABOT_ALERTS" | jq fromjson)
+        dependabot_prs_json=[]
+        if [ -z "$DEPENDABOT_PRS" ]; then
+            echo "No dependabot PR data to include"
+        else
+            dependabot_prs_json="${DEPENDABOT_PRS}"
+        fi
 
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
-            --arg repo_version "$repo_version" \
             --argjson dependencies "$dependencies_parsed" \
             --argjson devDependencies "$dev_dependencies_parsed" \
-            --argjson appstoreData "$appstore_data_parsed" \
-            --argjson browserlistData "$browserlist_data_parsed" \
             --argjson repository "$repository_parsed" \
             --argjson dependabot_prs "$dependabot_prs_json" \
-            --argjson dependabot_alerts "$dependabot_alerts_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
-            --argjson release_notes "$release_notes_parsed" \
-            '. + {($repo_name): { "dependencies": $dependencies, "devDependencies": $devDependencies, "appstoreData": $appstoreData", "browserlistData": $browserlistData","repository": $repository, "dependabot_prs": $dependabot_prs, "dependabot_alerts": $dependabot_alerts, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "release_notes": $release_notes }}')
+            '. + {($repo_name): {"dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
