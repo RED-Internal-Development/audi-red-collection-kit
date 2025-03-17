@@ -179,7 +179,6 @@ runs:
         dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
         repository_parsed=$(echo "$repository" | jq fromjson)
         dependabot_prs_json=$(echo "$DEPENDABOT_PRS" | jq fromjson)
-        # dependabot_alerts_json=$(echo "$DEPENDABOT_ALERTS" | jq fromjson)
 
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
@@ -190,7 +189,6 @@ runs:
             --argjson browserlistData "$browserlist_data_parsed" \
             --argjson repository "$repository_parsed" \
             --argjson dependabot_prs "$dependabot_prs_json" \
-            # --argjson dependabot_alerts "$dependabot_alerts_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
