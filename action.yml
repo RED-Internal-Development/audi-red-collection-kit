@@ -123,18 +123,18 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
-    - name: Get Latest Release Notes
-      shell: bash
-      run: |
-        RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt --jq '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}')
+    # - name: Get Latest Release Notes
+    #   shell: bash
+    #   run: |
+    #     RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt --jq '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}')
 
-        if [ -z "$RELEASE_NOTES" ]; then
-            echo "No releases found."
-            exit 0
-        else
-            echo "Latest release notes: $RELEASE_NOTES"
-            echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
-        fi
+    #     if [ -z "$RELEASE_NOTES" ]; then
+    #         echo "No releases found."
+    #         exit 0
+    #     else
+    #         echo "Latest release notes: $RELEASE_NOTES"
+    #         echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
+    #     fi
 
     # - name: Get all open Dependabot alerts
     #   shell: bash
