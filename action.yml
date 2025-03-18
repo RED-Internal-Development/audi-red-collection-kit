@@ -126,15 +126,18 @@ runs:
     # - name: Get Latest Release Notes
     #   shell: bash
     #   run: |
-    #     RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt --jq '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}')
+    #     RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt --jq '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}' || echo "")
 
     #     if [ -z "$RELEASE_NOTES" ]; then
     #         echo "No releases found."
-    #         exit 0
+    #         RELEASE_NOTES=null
     #     else
     #         echo "Latest release notes: $RELEASE_NOTES"
-    #         echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
     #     fi
+
+    #     echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
+    #   env:
+    #     GH_TOKEN: ${{ inputs.github_token }}
 
     # - name: Get all open Dependabot alerts
     #   shell: bash
@@ -164,6 +167,7 @@ runs:
         appstoreData=$(jq '.appStore // {}' package.json | jq tostring)
         browserlistData=$(jq '.browserslist // {}' package.json | jq tostring)
         repository=$(jq '.repository' package.json | jq tostring)
+
         echo "repo_name=$repo_name" >> $GITHUB_ENV
         echo "repo_version=$repo_version" >> $GITHUB_ENV
         echo "dependencies=$dependencies" >> $GITHUB_ENV
@@ -187,9 +191,12 @@ runs:
         else
             dependabot_prs_json="${DEPENDABOT_PRS}"
         fi
+        appstore_data_parsed=$(echo "$appstoreData" | jq fromjson)
+        browserlist_data_parsed=$(echo "$browserlistData" | jq fromjson)
 
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
+            --arg repo_version "$repo_version" \
             --argjson dependencies "$dependencies_parsed" \
             --argjson devDependencies "$dev_dependencies_parsed" \
             --argjson repository "$repository_parsed" \
@@ -197,7 +204,9 @@ runs:
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
-            '. + {($repo_name): {"dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage}}')
+            --argjson appstoreData "$appstore_data_parsed" \
+            --argjson browserlistData "$browserlist_data_parsed" \
+            '. + {($repo_name): {"repo_version": $repo_version, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
