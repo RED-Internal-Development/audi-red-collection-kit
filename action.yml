@@ -142,7 +142,6 @@ runs:
     - name: Get all open Dependabot alerts
       shell: bash
       run: |
-        echo "$GH_TOKEN" | gh auth login --with-token
         echo "repository: ${{ github.repository }}"
         ALERTS=$(gh api \
             -H "Accept: application/vnd.github+json" \
