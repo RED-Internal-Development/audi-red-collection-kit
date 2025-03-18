@@ -164,7 +164,7 @@ runs:
         repo_version=$(jq -r '.version' package.json)
         dependencies=$(jq '.dependencies' package.json | jq tostring)
         devDependencies=$(jq '.devDependencies' package.json | jq tostring)
-        appstoreData=$(jq '.appstore // {}' package.json | jq tostring)
+        appstoreData=$(jq '.appStore // {}' package.json | jq tostring)
         browserlistData=$(jq '.browserslist // {}' package.json | jq tostring)
         repository=$(jq '.repository' package.json | jq tostring)
 
