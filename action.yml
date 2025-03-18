@@ -125,7 +125,7 @@ runs:
         GH_TOKEN: ${{ inputs.github_token }} 
       run: |
         LATEST_VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "")
-        RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt -q '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}' 2>/dev/null || echo "")
+        RELEASE_HISTORY=$(gh release list --json tagName,name,body,publishedAt -q '.[] | {tag: .tagName, name: .name, date: .publishedAt, notes: .body}' 2>/dev/null || echo "")
 
         if [ -z "$LATEST_VERSION" ]; then
             echo "No releases found."
