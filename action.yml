@@ -119,14 +119,6 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
-    - name: Check GitHub Token Scopes
-      shell: bash
-      run: |
-        echo "Checking token scopes..."
-        curl -s -D - -H "Authorization: token ${GH_TOKEN}" https://api.github.com | grep -i '^X-OAuth-Scopes:' || true
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Get latest release info
       shell: bash
       env:
