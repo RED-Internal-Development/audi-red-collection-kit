@@ -139,23 +139,25 @@ runs:
     #   env:
     #     GH_TOKEN: ${{ inputs.github_token }}
 
-    # - name: Get all open Dependabot alerts
-    #   shell: bash
-    #   run: |
-    #     ALERTS=$(gh api repos/${{ github.repository }}/dependabot/alerts --jq '[.[] | {package: .security_advisory.affected[0].package.name, severity: .security_advisory.severity, url: .html_url}]')
+    - name: Get all open Dependabot alerts
+      shell: bash
+      run: |
+        gh auth login --with-token < $GITHUB_TOKEN
+        ALERTS=$(gh api repos/${{ github.repository }}/dependabot/alerts --jq '[.[] | {package: .security_advisory.affected[0].package.name, severity: .security_advisory.severity, url: .html_url}]' || echo "")
 
-    #     if [ -z "$ALERTS" ]; then
-    #         echo "No open Dependabot alerts found."
-    #         DEPENDABOT_ALERTS="[]"
-    #     else
-    #         echo "Open Dependabot alerts:"
-    #         echo "$ALERTS"
-    #         DEPENDABOT_ALERTS=$ALERTS
-    #     fi
+        if [ -z "$ALERTS" ]; then
+            echo "No open Dependabot alerts found."
+            DEPENDABOT_ALERTS="[]"
+        else
+            echo "Open Dependabot alerts:"
+            echo "$ALERTS"
+            DEPENDABOT_ALERTS=$ALERTS
+        fi
 
-    #     echo "DEPENDABOT_ALERTS=$DEPENDABOT_ALERTS" >> $GITHUB_ENV
-    #   env:
-    #     GH_TOKEN: ${{ inputs.github_token }}
+        echo "DEPENDABOT_ALERTS: $DEPENDABOT_ALERTS"
+        echo "DEPENDABOT_ALERTS=$DEPENDABOT_ALERTS" >> $GITHUB_ENV
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
 
     - name: Extract dependencies from package.json of local repository
       shell: bash
