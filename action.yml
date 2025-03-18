@@ -123,7 +123,7 @@ runs:
       shell: bash
       run: |
         echo "Checking token scopes..."
-        curl -s -D - -H "Authorization: token ${GH_TOKEN}" https://api.github.com | grep -i 'X-OAuth-Scopes'
+        curl -s -D - -H "Authorization: token ${GH_TOKEN}" https://api.github.com | grep -i '^X-OAuth-Scopes:'
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
