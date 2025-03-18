@@ -119,12 +119,19 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
+    - name: Check GitHub Token Scopes
+      shell: bash
+      run: |
+        echo "Checking token scopes..."
+        curl -s -D - -H "Authorization: token ${GH_TOKEN}" https://api.github.com | grep -i 'X-OAuth-Scopes'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Get latest release info
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }} 
       run: |
-        echo "${GH_TOKEN}" | gh auth login --with-token
         LATEST_VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "")
         RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt -q '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}' 2>/dev/null || echo "")
 
