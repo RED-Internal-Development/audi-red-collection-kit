@@ -134,7 +134,7 @@ runs:
         LATEST_VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "")
 
         echo "Fetching full release history..."
-        RELEASE_HISTORY=$(gh release list --json tagName,name,body,publishedAt -q '[.[] | {tag: .tagName, name: .name, date: .publishedAt, notes: .body}]' 2>/dev/null || echo "")
+        RELEASE_HISTORY=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | {tag: .tag_name, name: .name, date: .published_at, notes: .body}]' 2>/dev/null || echo "")
 
         echo "LATEST_VERSION: $LATEST_VERSION"
         echo "RELEASE_HISTORY: $RELEASE_HISTORY"
@@ -162,7 +162,7 @@ runs:
         GH_TOKEN: ${{ inputs.github_token }} 
       run: |
         LATEST_VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "")
-        RELEASE_HISTORY=$(gh release list --json tagName,name,body,publishedAt -q '[.[] | {tag: .tagName, name: .name, date: .publishedAt, notes: .body}]' 2>/dev/null || echo "")
+        RELEASE_HISTORY=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | {tag: .tag_name, name: .name, date: .published_at, notes: .body}]' 2>/dev/null || echo "")
 
         if [ -z "$LATEST_VERSION" ]; then
             echo "No releases found."
