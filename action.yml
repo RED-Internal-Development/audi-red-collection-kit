@@ -119,7 +119,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
-    - name: Get latest release info
+    - name: Get latest release info and latest version
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }} 
@@ -130,6 +130,9 @@ runs:
         if [ -z "$LATEST_VERSION" ]; then
             echo "No releases found."
             LATEST_VERSION="null"
+        fi
+        else
+            echo "Latest Version: $LATEST_VERSION"
         fi
 
         if [ -z "$RELEASE_NOTES" ]; then
