@@ -134,16 +134,16 @@ runs:
             echo "Latest Version: $LATEST_VERSION"
         fi
 
-        if [ -z "$RELEASE_NOTES" ]; then
+        if [ -z "$RELEASE_HISTORY" ]; then
             echo "No releases found."
-            RELEASE_NOTES="[]"
+            RELEASE_HISTORY="[]"
         else
-            echo "Latest release notes: $RELEASE_NOTES"
+            echo "Latest release notes: $RELEASE_HISTORY"
         fi
 
         echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
-        echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-        echo "$RELEASE_NOTES" >> $GITHUB_ENV
+        echo "RELEASE_HISTORY<<EOF" >> $GITHUB_ENV
+        echo "$RELEASE_HISTORY" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
     - name: Extract dependencies from package.json of local repository
@@ -190,7 +190,7 @@ runs:
             --arg repo_version "$repo_version" \
             --arg published_version "$LATEST_VERSION" \
             --arg awsDomain "$awsDomain" \
-            --argjson release_notes "$RELEASE_NOTES" \
+            --argjson release_history "$RELEASE_HISTORY" \
             --argjson dependencies "$dependencies_parsed" \
             --argjson devDependencies "$dev_dependencies_parsed" \
             --argjson repository "$repository_parsed" \
@@ -200,7 +200,7 @@ runs:
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
             --argjson appstoreData "$appstore_data_parsed" \
             --argjson browserlistData "$browserlist_data_parsed" \
-            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_notes": $release_notes}}')
+            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_history": $release_history}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
