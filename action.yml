@@ -1,9 +1,5 @@
 name: AudiRED Collection Kit
 description: Toolkit used for AudiRED data collection from oneaudi repositories
-permissions:
-  contents: read
-  pull-requests: read
-  security-events: read
 inputs:
   github_token:
     description: "token used for accessing dependabot data inside repository"
@@ -123,45 +119,39 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
-    # - name: Get Latest Release Notes
-    #   shell: bash
-    #   run: |
-    #     RELEASE_NOTES=$(gh release view --json tagName,name,body,publishedAt --jq '{tag: .tagName, name: .name, date: .publishedAt, notes: .body}' || echo "")
+    - name: Get latest release info and latest version
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }} 
+      run: |
+        LATEST_VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "")
+        RELEASE_HISTORY=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | {tag: .tag_name, name: .name, date: .published_at, notes: .body}]' 2>/dev/null || echo "")
 
-    #     if [ -z "$RELEASE_NOTES" ]; then
-    #         echo "No releases found."
-    #         RELEASE_NOTES=null
-    #     else
-    #         echo "Latest release notes: $RELEASE_NOTES"
-    #     fi
+        if [ -z "$LATEST_VERSION" ]; then
+            echo "No releases found."
+            LATEST_VERSION="null"
+        else
+            echo "Latest Version: $LATEST_VERSION"
+        fi
 
-    #     echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
-    #   env:
-    #     GH_TOKEN: ${{ inputs.github_token }}
+        if [ -z "$RELEASE_HISTORY" ]; then
+            echo "No releases found."
+            RELEASE_HISTORY="[]"
+        else
+            echo "Latest release notes: $RELEASE_HISTORY"
+        fi
 
-    # - name: Get all open Dependabot alerts
-    #   shell: bash
-    #   run: |
-    #     ALERTS=$(gh api repos/${{ github.repository }}/dependabot/alerts --jq '[.[] | {package: .security_advisory.affected[0].package.name, severity: .security_advisory.severity, url: .html_url}]')
-
-    #     if [ -z "$ALERTS" ]; then
-    #         echo "No open Dependabot alerts found."
-    #         DEPENDABOT_ALERTS="[]"
-    #     else
-    #         echo "Open Dependabot alerts:"
-    #         echo "$ALERTS"
-    #         DEPENDABOT_ALERTS=$ALERTS
-    #     fi
-
-    #     echo "DEPENDABOT_ALERTS=$DEPENDABOT_ALERTS" >> $GITHUB_ENV
-    #   env:
-    #     GH_TOKEN: ${{ inputs.github_token }}
+        echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+        echo "RELEASE_HISTORY<<EOF" >> $GITHUB_ENV
+        echo "$RELEASE_HISTORY" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
     - name: Extract dependencies from package.json of local repository
       shell: bash
       run: |
         repo_name=$(jq -r '.name' package.json)
         repo_version=$(jq -r '.version' package.json)
+        awsDomain=$(jq -r '.project.awsDomain // empty' oneaudi-cli.json)
         dependencies=$(jq '.dependencies' package.json | jq tostring)
         devDependencies=$(jq '.devDependencies' package.json | jq tostring)
         appstoreData=$(jq '.appStore // {}' package.json | jq tostring)
@@ -175,6 +165,7 @@ runs:
         echo "appstoreData=$appstoreData" >> $GITHUB_ENV
         echo "browserlistData=$browserlistData" >> $GITHUB_ENV
         echo "repository=$repository" >> $GITHUB_ENV
+        echo "awsDomain=$awsDomain" >> $GITHUB_ENV
 
     - name: Create report.json
       shell: bash
@@ -197,6 +188,9 @@ runs:
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
             --arg repo_version "$repo_version" \
+            --arg published_version "$LATEST_VERSION" \
+            --arg awsDomain "$awsDomain" \
+            --argjson release_history "$RELEASE_HISTORY" \
             --argjson dependencies "$dependencies_parsed" \
             --argjson devDependencies "$dev_dependencies_parsed" \
             --argjson repository "$repository_parsed" \
@@ -206,7 +200,7 @@ runs:
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
             --argjson appstoreData "$appstore_data_parsed" \
             --argjson browserlistData "$browserlist_data_parsed" \
-            '. + {($repo_name): {"repo_version": $repo_version, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData}}')
+            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_history": $release_history}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
