@@ -108,6 +108,7 @@ runs:
         else
             echo "Open Dependabot PRs:"
             echo "$PRS"
+        fi
 
         echo "DEPENDABOT_PRS<<EOF" >> $GITHUB_ENV
         echo "$PR" >> $GITHUB_ENV
