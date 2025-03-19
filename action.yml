@@ -100,7 +100,7 @@ runs:
     - name: Get all open PRs created by Dependabot
       shell: bash
       run: |
-        PRS=$(gh pr list --author dependabot[bot] --state open --json title,url,createdAt --jq '[.[] | {(.title) - \(.url) - Created at: \(.createdAt)}]' 2>/dev/null || echo "")
+        PRS=$(gh pr list --author dependabot[bot] --state open --json title,url,createdAt --jq '.[] | "\(.title) - \(.url) - Created at: \(.createdAt)"')
 
         if [ -z "$PRS" ]; then
             echo "No open Dependabot PRs found."
@@ -108,11 +108,14 @@ runs:
         else
             echo "Open Dependabot PRs:"
             echo "$PRS"
-        fi
 
-        echo "DEPENDABOT_PRS<<EOF" >> $GITHUB_ENV
-        echo "$PRS" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
+        dependabot_array=()
+        while IFS= read -r line; do
+            dependabot_array+=("\"$line\"")
+            done <<< "$PRS"
+            DEPENDABOT_PRS=$(IFS=,; echo "${dependabot_array[*]}")
+            echo "DEPENDABOT_PRS=[${DEPENDABOT_PRS}]" >> $GITHUB_ENV
+        fi
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
@@ -173,6 +176,12 @@ runs:
         dependencies_parsed=$(echo "$dependencies" | jq fromjson)
         dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
         repository_parsed=$(echo "$repository" | jq fromjson)
+        dependabot_prs_json=[]
+        if [ -z "$DEPENDABOT_PRS" ]; then
+            echo "No dependabot PR data to include"
+        else
+            dependabot_prs_json="${DEPENDABOT_PRS}"
+        fi
         appstore_data_parsed=$(echo "$appstoreData" | jq fromjson)
         browserlist_data_parsed=$(echo "$browserlistData" | jq fromjson)
 
@@ -185,7 +194,7 @@ runs:
             --argjson dependencies "$dependencies_parsed" \
             --argjson devDependencies "$dev_dependencies_parsed" \
             --argjson repository "$repository_parsed" \
-            --argjson dependabot_prs "$DEPENDABOT_PRS" \
+            --argjson dependabot_prs "$dependabot_prs_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
