@@ -130,7 +130,6 @@ runs:
         if [ -z "$LATEST_VERSION" ]; then
             echo "No releases found."
             LATEST_VERSION="null"
-        fi
         else
             echo "Latest Version: $LATEST_VERSION"
         fi
