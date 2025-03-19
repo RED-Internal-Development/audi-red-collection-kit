@@ -149,7 +149,7 @@ runs:
       run: |
         repo_name=$(jq -r '.name' package.json)
         repo_version=$(jq -r '.version' package.json)
-        awsDomain=$(jq -r '.project.awsDomain // {}' oneaudi-cli.json | jq tostring)
+        awsDomain=$(jq -r '.project.awsDomain // empty' oneaudi-cli.json)
         dependencies=$(jq '.dependencies' package.json | jq tostring)
         devDependencies=$(jq '.devDependencies' package.json | jq tostring)
         appstoreData=$(jq '.appStore // {}' package.json | jq tostring)
