@@ -119,6 +119,43 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
 
+    - name: Get release history info
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        echo "Checking GitHub authentication..."
+        gh auth status || { echo "Authentication failed"; exit 1; }
+
+        echo "Fetching repository details..."
+        gh repo view || { echo "Repository access failed"; exit 1; }
+
+        echo "Fetching latest release..."
+        LATEST_VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "")
+
+        echo "Fetching full release history..."
+        RELEASE_HISTORY=$(gh release list --json tagName,name,body,publishedAt -q '[.[] | {tag: .tagName, name: .name, date: .publishedAt, notes: .body}]' 2>/dev/null || echo "")
+
+        echo "LATEST_VERSION: $LATEST_VERSION"
+        echo "RELEASE_HISTORY: $RELEASE_HISTORY"
+
+        if [ -z "$LATEST_VERSION" ]; then
+            echo "No releases found or latest release fetch failed."
+            LATEST_VERSION="null"
+        fi
+
+        if [ -z "$RELEASE_HISTORY" ] || [ "$RELEASE_HISTORY" = "[]" ]; then
+            echo "No releases found or release history fetch failed."
+            RELEASE_HISTORY="[]"
+        else
+            echo "Release history successfully fetched!"
+        fi
+
+        echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+        echo "RELEASE_HISTORY<<EOF" >> $GITHUB_ENV
+        echo "$RELEASE_HISTORY" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
     - name: Get latest release info
       shell: bash
       env:
@@ -130,7 +167,6 @@ runs:
         if [ -z "$LATEST_VERSION" ]; then
             echo "No releases found."
             LATEST_VERSION="null"
-            RELEASE_NOTES="[]"
         fi
 
         if [ -z "$RELEASE_NOTES" ]; then
