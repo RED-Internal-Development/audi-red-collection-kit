@@ -74,10 +74,10 @@ runs:
 
             echo "Coverage Output: $COVERAGE_OUTPUT"
 
-            STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s+:\s+\K[0-9.]+')
-            BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s+:\s+\K[0-9.]+')
-            FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s+:\s+\K[0-9.]+')
-            LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s+:\s+\K[0-9.]+')
+            STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
+            BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
+            FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
+            LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
 
             echo "Line coverage: $LINES%"
             echo "Statement coverage: $STATEMENTS%"
