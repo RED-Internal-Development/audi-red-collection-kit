@@ -26,20 +26,28 @@ runs:
         else
             if [ -f "${{ inputs.jest_coverage_file_path }}" ]; then
                 LINES=$(jq '.total.lines.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$LINES" == "Unknown" ]]; then
+                STATEMENTS=$(jq '.total.statements.pct' < ./${{ inputs.jest_coverage_file_path }})
+                FUNCTIONS=$(jq '.total.functions.pct' < ./${{ inputs.jest_coverage_file_path }})
+                BRANCHES=$(jq '.total.branches.pct' < ./${{ inputs.jest_coverage_file_path }})
+
+                is_number() {
+                  [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]
+                }
+
+                # Set to 0 if not a number
+                if ! is_number "$LINES"; then
                   LINES=0
                 fi
 
-                STATEMENTS=$(jq '.total.statements.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$STATEMENTS" == "Unknown" ]]; then
+                if ! is_number "$STATEMENTS"; then
                   STATEMENTS=0
                 fi
-                FUNCTIONS=$(jq '.total.functions.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$FUNCTIONS" == "Unknown" ]]; then
+
+                if ! is_number "$FUNCTIONS"; then
                   FUNCTIONS=0
                 fi
-                BRANCHES=$(jq '.total.branches.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$BRANCHES" == "Unknown" ]]; then
+
+                if ! is_number "$BRANCHES"; then
                   BRANCHES=0
                 fi
 
@@ -49,7 +57,6 @@ runs:
                 echo "Branch coverage: $BRANCHES%"
                 
                 AVERAGE_COVERAGE=$(echo "($LINES + $STATEMENTS + $FUNCTIONS + $BRANCHES) / 4" | bc -l)
-
                 echo "Average coverage: $AVERAGE_COVERAGE%"
             else
                 echo "${{ inputs.jest_coverage_file_path }} is not found in the repository, skipping"
