@@ -26,19 +26,28 @@ runs:
         else
             if [ -f "${{ inputs.jest_coverage_file_path }}" ]; then
                 LINES=$(jq '.total.lines.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$LINES" == "unknown" ]]; then LINES=0 fi
+                if [[ "$LINES" == "unknown" ]]; then
+                  LINES=0
+                fi
+
                 STATEMENTS=$(jq '.total.statements.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$STATEMENTS" == "unknown" ]]; then STATEMENTS=0 fi
+                if [[ "$STATEMENTS" == "unknown" ]]; then
+                  STATEMENTS=0
+                fi
                 FUNCTIONS=$(jq '.total.functions.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$FUNCTIONS" == "unknown" ]]; then FUNCTIONS=0 fi
+                if [[ "$FUNCTIONS" == "unknown" ]]; then
+                  FUNCTIONS=0
+                fi
                 BRANCHES=$(jq '.total.branches.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$BRANCHES" == "unknown" ]]; then BRANCHES=0 fi
+                if [[ "$BRANCHES" == "unknown" ]]; then
+                  BRANCHES=0
+                fi
 
                 echo "Line coverage: $LINES%"
                 echo "Statement coverage: $STATEMENTS%"
                 echo "Function coverage: $FUNCTIONS%"
                 echo "Branch coverage: $BRANCHES%"
-
+                
                 AVERAGE_COVERAGE=$(echo "($LINES + $STATEMENTS + $FUNCTIONS + $BRANCHES) / 4" | bc -l)
 
                 echo "Average coverage: $AVERAGE_COVERAGE%"
