@@ -26,20 +26,20 @@ runs:
         else
             if [ -f "${{ inputs.jest_coverage_file_path }}" ]; then
                 LINES=$(jq '.total.lines.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$LINES" == "unknown" ]]; then
+                if [[ "$LINES" == "Unknown" ]]; then
                   LINES=0
                 fi
 
                 STATEMENTS=$(jq '.total.statements.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$STATEMENTS" == "unknown" ]]; then
+                if [[ "$STATEMENTS" == "Unknown" ]]; then
                   STATEMENTS=0
                 fi
                 FUNCTIONS=$(jq '.total.functions.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$FUNCTIONS" == "unknown" ]]; then
+                if [[ "$FUNCTIONS" == "Unknown" ]]; then
                   FUNCTIONS=0
                 fi
                 BRANCHES=$(jq '.total.branches.pct' < ./${{ inputs.jest_coverage_file_path }})
-                if [[ "$BRANCHES" == "unknown" ]]; then
+                if [[ "$BRANCHES" == "Unknown" ]]; then
                   BRANCHES=0
                 fi
 
