@@ -30,13 +30,33 @@ runs:
                 FUNCTIONS=$(jq '.total.functions.pct' < ./${{ inputs.jest_coverage_file_path }})
                 BRANCHES=$(jq '.total.branches.pct' < ./${{ inputs.jest_coverage_file_path }})
 
+                is_number() {
+                  [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]
+                }
+
+                # Set to 0 if not a number
+                if ! is_number "$LINES"; then
+                  LINES=0
+                fi
+
+                if ! is_number "$STATEMENTS"; then
+                  STATEMENTS=0
+                fi
+
+                if ! is_number "$FUNCTIONS"; then
+                  FUNCTIONS=0
+                fi
+
+                if ! is_number "$BRANCHES"; then
+                  BRANCHES=0
+                fi
+
                 echo "Line coverage: $LINES%"
                 echo "Statement coverage: $STATEMENTS%"
                 echo "Function coverage: $FUNCTIONS%"
                 echo "Branch coverage: $BRANCHES%"
-
+                
                 AVERAGE_COVERAGE=$(echo "($LINES + $STATEMENTS + $FUNCTIONS + $BRANCHES) / 4" | bc -l)
-
                 echo "Average coverage: $AVERAGE_COVERAGE%"
             else
                 echo "${{ inputs.jest_coverage_file_path }} is not found in the repository, skipping"
