@@ -170,7 +170,7 @@ runs:
       shell: bash
       run: |
         npm audit --json > npm-audit.json || true
-        npm_audit_output=$(cat npm-audit.json)
+        npm_audit_output=$(jq -c . npm-audit.json)
         echo "NPM_AUDIT_DATA=$npm_audit_output" >> $GITHUB_ENV
 
     - name: Extract dependencies from package.json of local repository
