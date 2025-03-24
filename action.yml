@@ -166,6 +166,13 @@ runs:
         echo "$RELEASE_HISTORY" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
 
+    - name: NPM Audit Collection
+      shell: bash
+      run: |
+        npm audit --json > npm-audit.json || true
+        npm_audit_output=$(cat npm-audit.json)
+        echo "NPM_AUDIT_DATA=$npm_audit_output" >> $GITHUB_ENV
+
     - name: Extract dependencies from package.json of local repository
       shell: bash
       run: |
@@ -205,6 +212,12 @@ runs:
         appstore_data_parsed=$(echo "$appstoreData" | jq fromjson)
         browserlist_data_parsed=$(echo "$browserlistData" | jq fromjson)
 
+        if [ -z "$NPM_AUDIT_DATA" ]; then
+            npm_audit_data_parsed="{}"
+        else
+            npm_audit_data_parsed=$(echo "$NPM_AUDIT_DATA" | jq .)
+        fi
+
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
             --arg repo_version "$repo_version" \
@@ -220,7 +233,8 @@ runs:
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
             --argjson appstoreData "$appstore_data_parsed" \
             --argjson browserlistData "$browserlist_data_parsed" \
-            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_history": $release_history}}')
+            --argjson npm_audit "$npm_audit_data_parsed" \
+            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_history": $release_history","npm_audit": $npm_audit}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
