@@ -178,12 +178,17 @@ runs:
       run: |
         repo_name=$(jq -r '.name' package.json)
         repo_version=$(jq -r '.version' package.json)
-        awsDomain=$(jq -r '.project.awsDomain // empty' oneaudi-cli.json)
         dependencies=$(jq '.dependencies' package.json | jq tostring)
         devDependencies=$(jq '.devDependencies' package.json | jq tostring)
         appstoreData=$(jq '.appStore // {}' package.json | jq tostring)
         browserlistData=$(jq '.browserslist // {}' package.json | jq tostring)
         repository=$(jq '.repository' package.json | jq tostring)
+
+        if [ -f "oneaudi-cli.json" ]; then
+          awsDomain=$(jq -r '.project.awsDomain // empty' oneaudi-cli.json)
+        else
+          awsDomain=""
+        fi
 
         echo "repo_name=$repo_name" >> $GITHUB_ENV
         echo "repo_version=$repo_version" >> $GITHUB_ENV
