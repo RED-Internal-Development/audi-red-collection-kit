@@ -237,11 +237,11 @@ runs:
         fi
 
         if [ -z "$UNIT_TEST_DATA" ]; then
+            UNIT_TEST_DATA_PARSED=null
+        else
             echo "about to parse UNIT_TEST_DATA"
             UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq fromjson)
             echo "UNIT_TEST_DATA_PARSED: $unit_test_data_parsed"
-        else
-            UNIT_TEST_DATA_PARSED=null
         fi
 
         # Add a new entry for the repository in report.json
