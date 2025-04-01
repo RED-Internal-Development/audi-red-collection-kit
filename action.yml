@@ -9,10 +9,12 @@ inputs:
     description: "path to the top level temp folder where the coverage results can be found"
     required: false
     type: string
+    default: .lighthouseci/assertion-results.json
   lighthouse_coverage_file_path:
     description: "path to the top level temp folder where the coverage results can be found"
     required: false
     type: string
+    default: coverage/coverage-summary.json
 
 runs:
   using: "composite"
@@ -22,7 +24,8 @@ runs:
       run: |
         if [ -z ${{ inputs.jest_coverage_file_path }} ]; then
             echo "jest_coverage_path input not provided, skipping"
-            AVERAGE_COVERAGE=null 
+            AVERAGE_COVERAGE=null
+            UNIT_TEST_DATA=null
         else
             if [ -f "${{ inputs.jest_coverage_file_path }}" ]; then
                 LINES=$(jq '.total.lines.pct' < ./${{ inputs.jest_coverage_file_path }})
@@ -58,13 +61,23 @@ runs:
                 
                 AVERAGE_COVERAGE=$(echo "($LINES + $STATEMENTS + $FUNCTIONS + $BRANCHES) / 4" | bc -l)
                 echo "Average coverage: $AVERAGE_COVERAGE%"
+
+                UNIT_TEST_DATA=$(jq -n \
+                  --arg lines "$LINES" \
+                  --arg statements "$STATEMENTS" \
+                  --arg functions "$FUNCTIONS" \
+                  --arg branches "$BRANCHES" \
+                  --arg average_coverage "$AVERAGE_COVERAGE" \
+                  '{"line_coverage": $lines, "statement_coverage": $statements, "function_coverage": $functions, "branch_coverage": $branches, "average_coverage": $average_coverage}  | @json')
             else
                 echo "${{ inputs.jest_coverage_file_path }} is not found in the repository, skipping"
                 AVERAGE_COVERAGE=null
+                UNIT_TEST_DATA=null
             fi
         fi
 
          echo "UNIT_TEST_COVERAGE=$AVERAGE_COVERAGE" >> $GITHUB_ENV
+         echo "UNIT_TEST_DATA=$UNIT_TEST_DATA" >> $GITHUB_ENV
 
     - name: E2E (Cypress) Coverage Collection
       shell: bash
@@ -99,7 +112,7 @@ runs:
       run: |
         if [ -z ${{ inputs.lighthouse_coverage_file_path }} ]; then
             echo "lighthouse_coverage_file_path input not provided, skipping"
-            AVERAGE_COVERAGE=null 
+            AVERAGE_COVERAGE=null
         else
             if [ -f "${{ inputs.lighthouse_coverage_file_path }}" ]; then
                 RESULTS_ACTUAL=$(jq '.[0].actual' < ./${{ inputs.lighthouse_coverage_file_path }})
@@ -223,6 +236,14 @@ runs:
             npm_audit_data_parsed=$(echo "$NPM_AUDIT_DATA" | jq .)
         fi
 
+        if [ -z "$UNIT_TEST_DATA" ]; then
+            UNIT_TEST_DATA_PARSED=null
+        else
+            echo "about to parse UNIT_TEST_DATA"
+            UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq fromjson)
+            echo "UNIT_TEST_DATA_PARSED: $unit_test_data_parsed"
+        fi
+
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
             --arg repo_version "$repo_version" \
@@ -235,11 +256,12 @@ runs:
             --argjson dependabot_prs "$dependabot_prs_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
+            --argjson unit_test_coverage_data "$UNIT_TEST_DATA_PARSED" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
             --argjson appstoreData "$appstore_data_parsed" \
             --argjson browserlistData "$browserlist_data_parsed" \
             --argjson npm_audit "$npm_audit_data_parsed" \
-            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_history": $release_history,"npm_audit": $npm_audit}}')
+            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "unit_test_coverage_data": $unit_test_coverage_data, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_history": $release_history,"npm_audit": $npm_audit}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
