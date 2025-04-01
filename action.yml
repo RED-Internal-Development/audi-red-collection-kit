@@ -25,6 +25,7 @@ runs:
         if [ -z ${{ inputs.jest_coverage_file_path }} ]; then
             echo "jest_coverage_path input not provided, skipping"
             AVERAGE_COVERAGE=null
+            UNIT_TEST_DATA=null
         else
             if [ -f "${{ inputs.jest_coverage_file_path }}" ]; then
                 LINES=$(jq '.total.lines.pct' < ./${{ inputs.jest_coverage_file_path }})
