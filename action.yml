@@ -68,13 +68,7 @@ runs:
                   --arg functions "$FUNCTIONS" \
                   --arg branches "$BRANCHES" \
                   --arg average_coverage "$AVERAGE_COVERAGE" \
-                  '{
-                    line_coverage: $lines,
-                    statement_coverage: $statements,
-                    function_coverage: $functions,
-                    branch_coverage: $branches,
-                    average_coverage: $average_coverage
-                  }')
+                  '{"line_coverage": $lines, "statement_coverage": $statements, "function_coverage": $functions, "branch_coverage": $branches, "average_coverage": $average_coverage}')
             else
                 echo "${{ inputs.jest_coverage_file_path }} is not found in the repository, skipping"
                 AVERAGE_COVERAGE=null
