@@ -222,7 +222,7 @@ runs:
         dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
         repository_parsed=$(echo "$repository" | jq fromjson)
         echo "about to parse UNIT_TEST_DATA"
-        UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq '.')
+        UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq -r .)
         echo "UNIT_TEST_DATA_PARSED: $unit_test_data_parsed"
         dependabot_prs_json=[]
         if [ -z "$DEPENDABOT_PRS" ]; then
