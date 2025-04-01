@@ -221,9 +221,6 @@ runs:
         dependencies_parsed=$(echo "$dependencies" | jq fromjson)
         dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
         repository_parsed=$(echo "$repository" | jq fromjson)
-        echo "about to parse UNIT_TEST_DATA"
-        UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq -r .)
-        echo "UNIT_TEST_DATA_PARSED: $unit_test_data_parsed"
         dependabot_prs_json=[]
         if [ -z "$DEPENDABOT_PRS" ]; then
             echo "No dependabot PR data to include"
@@ -239,6 +236,14 @@ runs:
             npm_audit_data_parsed=$(echo "$NPM_AUDIT_DATA" | jq .)
         fi
 
+        if [ -z "$UNIT_TEST_DATA" ]; then
+            echo "about to parse UNIT_TEST_DATA"
+            UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq fromjson)
+            echo "UNIT_TEST_DATA_PARSED: $unit_test_data_parsed"
+        else
+            UNIT_TEST_DATA_PARSED=null
+        fi
+
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
             --arg repo_version "$repo_version" \
@@ -251,7 +256,7 @@ runs:
             --argjson dependabot_prs "$dependabot_prs_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
-            --argjson unit_test_coverage_data "$unit_test_data_parsed" \
+            --argjson unit_test_coverage_data "$UNIT_TEST_DATA_PARSED" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
             --argjson appstoreData "$appstore_data_parsed" \
             --argjson browserlistData "$browserlist_data_parsed" \
