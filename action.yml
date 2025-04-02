@@ -68,7 +68,7 @@ runs:
                   --arg functions "$FUNCTIONS" \
                   --arg branches "$BRANCHES" \
                   --arg average_coverage "$AVERAGE_COVERAGE" \
-                  '{"line_coverage": $lines, "statement_coverage": $statements, "function_coverage": $functions, "branch_coverage": $branches, "average_coverage": $average_coverage}  | @json')
+                  '{"line_coverage": ($lines | tonumber), "statement_coverage": ($statements | tonumber), "function_coverage": ($functions | tonumber), "branch_coverage": ($branches | tonumber), "average_coverage": ($average_coverage | tonumber)}  | @json')
             else
                 echo "${{ inputs.jest_coverage_file_path }} is not found in the repository, skipping"
                 AVERAGE_COVERAGE=null
