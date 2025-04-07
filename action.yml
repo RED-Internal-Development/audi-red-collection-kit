@@ -236,7 +236,7 @@ runs:
             npm_audit_data_parsed=$(echo "$NPM_AUDIT_DATA" | jq .)
         fi
 
-        if [ -z "$UNIT_TEST_DATA" ]; then
+        if [ -z "$UNIT_TEST_DATA" ] || [ "$UNIT_TEST_DATA" == "null" ]; then
             UNIT_TEST_DATA_PARSED=null
         else
             echo "about to parse UNIT_TEST_DATA"
