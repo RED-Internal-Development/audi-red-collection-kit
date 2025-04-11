@@ -130,111 +130,17 @@ runs:
 
         echo "LIGHTHOUSE_SCORE=$RESULTS_ACTUAL" >> $GITHUB_ENV
 
-    - name: Get all open PRs created by Dependabot
-      shell: bash
-      run: |
-        PRS=$(gh pr list --author dependabot[bot] --state open --json title,url,createdAt --jq '.[] | "\(.title) - \(.url) - Created at: \(.createdAt)"')
-
-        if [ -z "$PRS" ]; then
-            echo "No open Dependabot PRs found."
-            exit 0
-        else
-            echo "Open Dependabot PRs:"
-            echo "$PRS"
-
-        dependabot_array=()
-        while IFS= read -r line; do
-            dependabot_array+=("\"$line\"")
-            done <<< "$PRS"
-            DEPENDABOT_PRS=$(IFS=,; echo "${dependabot_array[*]}")
-            echo "DEPENDABOT_PRS=[${DEPENDABOT_PRS}]" >> $GITHUB_ENV
-        fi
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-
-    - name: Get latest release info and latest version
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-      run: |
-        LATEST_VERSION=$(gh release view --json tagName -q '.tagName' 2>/dev/null || echo "")
-        RELEASE_HISTORY=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | {tag: .tag_name, name: .name, date: .published_at, notes: .body}]' 2>/dev/null || echo "")
-
-        if [ -z "$LATEST_VERSION" ]; then
-            echo "No releases found."
-            LATEST_VERSION="null"
-        else
-            echo "Latest Version: $LATEST_VERSION"
-        fi
-
-        if [ -z "$RELEASE_HISTORY" ]; then
-            echo "No releases found."
-            RELEASE_HISTORY="[]"
-        else
-            echo "Latest release notes: $RELEASE_HISTORY"
-        fi
-
-        echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
-        echo "RELEASE_HISTORY<<EOF" >> $GITHUB_ENV
-        echo "$RELEASE_HISTORY" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
-
-    - name: NPM Audit Collection
-      shell: bash
-      run: |
-        npm audit --json > npm-audit.json || true
-        npm_audit_output=$(jq -c . npm-audit.json)
-        echo "NPM_AUDIT_DATA=$npm_audit_output" >> $GITHUB_ENV
-
-    - name: Extract dependencies from package.json of local repository
+    - name: Extract repo name from package.json of local repository
       shell: bash
       run: |
         repo_name=$(jq -r '.name' package.json)
-        repo_version=$(jq -r '.version' package.json)
-        dependencies=$(jq '.dependencies' package.json | jq tostring)
-        devDependencies=$(jq '.devDependencies' package.json | jq tostring)
-        appstoreData=$(jq '.appStore // {}' package.json | jq tostring)
-        browserlistData=$(jq '.browserslist // {}' package.json | jq tostring)
-        repository=$(jq '.repository' package.json | jq tostring)
-
-        if [ -f "oneaudi-cli.json" ]; then
-          awsDomain=$(jq -r '.project.awsDomain // empty' oneaudi-cli.json)
-        else
-          awsDomain=""
-        fi
-
         echo "repo_name=$repo_name" >> $GITHUB_ENV
-        echo "repo_version=$repo_version" >> $GITHUB_ENV
-        echo "dependencies=$dependencies" >> $GITHUB_ENV
-        echo "devDependencies=$devDependencies" >> $GITHUB_ENV
-        echo "appstoreData=$appstoreData" >> $GITHUB_ENV
-        echo "browserlistData=$browserlistData" >> $GITHUB_ENV
-        echo "repository=$repository" >> $GITHUB_ENV
-        echo "awsDomain=$awsDomain" >> $GITHUB_ENV
 
     - name: Create report.json
       shell: bash
       run: |
         echo "{}" > report.json
         report_json=$(cat report.json)
-
-        dependencies_parsed=$(echo "$dependencies" | jq fromjson)
-        dev_dependencies_parsed=$(echo "$devDependencies" | jq fromjson)
-        repository_parsed=$(echo "$repository" | jq fromjson)
-        dependabot_prs_json=[]
-        if [ -z "$DEPENDABOT_PRS" ]; then
-            echo "No dependabot PR data to include"
-        else
-            dependabot_prs_json="${DEPENDABOT_PRS}"
-        fi
-        appstore_data_parsed=$(echo "$appstoreData" | jq fromjson)
-        browserlist_data_parsed=$(echo "$browserlistData" | jq fromjson)
-
-        if [ -z "$NPM_AUDIT_DATA" ]; then
-            npm_audit_data_parsed="{}"
-        else
-            npm_audit_data_parsed=$(echo "$NPM_AUDIT_DATA" | jq .)
-        fi
 
         if [ -z "$UNIT_TEST_DATA" ] || [ "$UNIT_TEST_DATA" == "null" ]; then
             UNIT_TEST_DATA_PARSED=null
@@ -246,22 +152,11 @@ runs:
 
         # Add a new entry for the repository in report.json
         updated_report=$(echo "$report_json" | jq --arg repo_name "$repo_name" \
-            --arg repo_version "$repo_version" \
-            --arg published_version "$LATEST_VERSION" \
-            --arg awsDomain "$awsDomain" \
-            --argjson release_history "$RELEASE_HISTORY" \
-            --argjson dependencies "$dependencies_parsed" \
-            --argjson devDependencies "$dev_dependencies_parsed" \
-            --argjson repository "$repository_parsed" \
-            --argjson dependabot_prs "$dependabot_prs_json" \
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson unit_test_coverage_data "$UNIT_TEST_DATA_PARSED" \
             --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
-            --argjson appstoreData "$appstore_data_parsed" \
-            --argjson browserlistData "$browserlist_data_parsed" \
-            --argjson npm_audit "$npm_audit_data_parsed" \
-            '. + {($repo_name): {"repo_version": $repo_version, "published_version": $published_version, "awsDomain": $awsDomain, "dependencies": $dependencies, "devDependencies": $devDependencies, "repository": $repository, "dependabot_prs": $dependabot_prs, "lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "unit_test_coverage_data": $unit_test_coverage_data, "e2e_test_coverage": $e2e_test_coverage, "appstoreData": $appstoreData, "browserlistData": $browserlistData, "release_history": $release_history,"npm_audit": $npm_audit}}')
+            '. + {($repo_name): {"lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "unit_test_coverage_data": $unit_test_coverage_data, "e2e_test_coverage": $e2e_test_coverage}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
