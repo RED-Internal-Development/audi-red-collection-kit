@@ -79,34 +79,6 @@ runs:
          echo "UNIT_TEST_COVERAGE=$AVERAGE_COVERAGE" >> $GITHUB_ENV
          echo "UNIT_TEST_DATA=$UNIT_TEST_DATA" >> $GITHUB_ENV
 
-    - name: E2E (Cypress) Coverage Collection
-      shell: bash
-      run: |
-        if [ -d ".nyc_output" ]; then
-            COVERAGE_OUTPUT=$(npx nyc report --reporter=text-summary)
-
-            echo "Coverage Output: $COVERAGE_OUTPUT"
-
-            STATEMENTS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Statements\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
-            BRANCHES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Branches\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
-            FUNCTIONS=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Functions\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
-            LINES=$(echo "$COVERAGE_OUTPUT" | grep -oP 'Lines\s+:\s+\K[0-9.]+|Unknown' | sed 's/Unknown/0/')
-
-            echo "Line coverage: $LINES%"
-            echo "Statement coverage: $STATEMENTS%"
-            echo "Function coverage: $FUNCTIONS%"
-            echo "Branch coverage: $BRANCHES%"
-
-            AVERAGE_COVERAGE=$(echo "($LINES + $STATEMENTS + $FUNCTIONS + $BRANCHES) / 4" | bc -l)
-
-            echo "Average coverage: $AVERAGE_COVERAGE%"
-        else
-            echo ".nyc_output folder does not exist for coverage reporting"
-            AVERAGE_COVERAGE=null
-        fi
-
-        echo "E2E_TEST_COVERAGE=$AVERAGE_COVERAGE" >> $GITHUB_ENV
-
     - name: Lighthouse Performance Collection
       shell: bash
       run: |
@@ -155,8 +127,7 @@ runs:
             --argjson lighthouse_score "$LIGHTHOUSE_SCORE" \
             --argjson unit_test_coverage "$UNIT_TEST_COVERAGE" \
             --argjson unit_test_coverage_data "$UNIT_TEST_DATA_PARSED" \
-            --argjson e2e_test_coverage "$E2E_TEST_COVERAGE" \
-            '. + {($repo_name): {"lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "unit_test_coverage_data": $unit_test_coverage_data, "e2e_test_coverage": $e2e_test_coverage}}')
+            '. + {($repo_name): {"lighthouse_score": $lighthouse_score, "unit_test_coverage": $unit_test_coverage, "unit_test_coverage_data": $unit_test_coverage_data}}')
 
         # Write the updated report back to the report file
         echo "$updated_report" > report.json
