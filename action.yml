@@ -30,10 +30,12 @@ runs:
             echo "Checking if Jest coverage file exists at: ${{ inputs.jest_coverage_file_path }}"
             ls -l ${{ inputs.jest_coverage_file_path }} || echo "File not found"
             if [ -f "${{ inputs.jest_coverage_file_path }}" ]; then
-                LINES=$(jq '.total.lines.pct' < ./${{ inputs.jest_coverage_file_path }})
-                STATEMENTS=$(jq '.total.statements.pct' < ./${{ inputs.jest_coverage_file_path }})
-                FUNCTIONS=$(jq '.total.functions.pct' < ./${{ inputs.jest_coverage_file_path }})
-                BRANCHES=$(jq '.total.branches.pct' < ./${{ inputs.jest_coverage_file_path }})
+                echo "Raw coverage file contents:"
+                cat ${{ inputs.jest_coverage_file_path }}
+                LINES=$(jq -r '.total.lines.pct // "null"' < ./${{ inputs.jest_coverage_file_path }})
+                STATEMENTS=$(jq -r '.total.statements.pct // "null"' < ./${{ inputs.jest_coverage_file_path }})
+                FUNCTIONS=$(jq -r '.total.functions.pct // "null"' < ./${{ inputs.jest_coverage_file_path }})
+                BRANCHES=$(jq -r '.total.branches.pct // "null"' < ./${{ inputs.jest_coverage_file_path }})
 
                 echo "Extracted values:"
                 echo "Lines: $LINES"
