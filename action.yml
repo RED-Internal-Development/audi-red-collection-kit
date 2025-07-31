@@ -9,12 +9,12 @@ inputs:
     description: "path to the top level temp folder where the coverage results can be found"
     required: false
     type: string
-    default: .lighthouseci/assertion-results.json
+    default: coverage/coverage-summary.json
   lighthouse_coverage_file_path:
     description: "path to the top level temp folder where the coverage results can be found"
     required: false
     type: string
-    default: coverage/coverage-summary.json
+    default: .lighthouseci/assertion-results.json
 
 runs:
   using: "composite"
