@@ -27,11 +27,19 @@ runs:
             AVERAGE_COVERAGE=null
             UNIT_TEST_DATA=null
         else
+            echo "Checking if Jest coverage file exists at: ${{ inputs.jest_coverage_file_path }}"
+            ls -l ${{ inputs.jest_coverage_file_path }} || echo "File not found"
             if [ -f "${{ inputs.jest_coverage_file_path }}" ]; then
                 LINES=$(jq '.total.lines.pct' < ./${{ inputs.jest_coverage_file_path }})
                 STATEMENTS=$(jq '.total.statements.pct' < ./${{ inputs.jest_coverage_file_path }})
                 FUNCTIONS=$(jq '.total.functions.pct' < ./${{ inputs.jest_coverage_file_path }})
                 BRANCHES=$(jq '.total.branches.pct' < ./${{ inputs.jest_coverage_file_path }})
+
+                echo "Extracted values:"
+                echo "Lines: $LINES"
+                echo "Statements: $STATEMENTS"
+                echo "Functions: $FUNCTIONS"
+                echo "Branches: $BRANCHES"
 
                 is_number() {
                   [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]
