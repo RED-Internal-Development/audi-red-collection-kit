@@ -129,7 +129,7 @@ runs:
         else
             echo "about to parse UNIT_TEST_DATA"
             UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq fromjson)
-            echo "UNIT_TEST_DATA_PARSED: $UNIT_TEST_DATA_PARSED"
+            echo "UNIT_TEST_DATA_PARSED: \"$UNIT_TEST_DATA_PARSED\""
         fi
 
         # Add a new entry for the repository in report.json
