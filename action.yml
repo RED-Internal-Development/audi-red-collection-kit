@@ -22,7 +22,7 @@ runs:
     - name: Unit Test (Jest) Coverage Collection
       shell: bash
       run: |
-        if [ -z ${{ inputs.jest_coverage_file_path }} ]; then
+        if [ -z "${{ inputs.jest_coverage_file_path }}" ]; then
             echo "jest_coverage_path input not provided, skipping"
             AVERAGE_COVERAGE=null
             UNIT_TEST_DATA=null
@@ -92,7 +92,7 @@ runs:
     - name: Lighthouse Performance Collection
       shell: bash
       run: |
-        if [ -z ${{ inputs.lighthouse_coverage_file_path }} ]; then
+        if [ -z "${{ inputs.lighthouse_coverage_file_path }}" ]; then
             echo "lighthouse_coverage_file_path input not provided, skipping"
             AVERAGE_COVERAGE=null
         else
@@ -129,8 +129,7 @@ runs:
         else
             echo "about to parse UNIT_TEST_DATA"
             UNIT_TEST_DATA_PARSED=$(echo "$UNIT_TEST_DATA" | jq fromjson)
-            echo "UNIT_TEST_DATA_PARSED: $
-            "
+            echo "UNIT_TEST_DATA_PARSED: $UNIT_TEST_DATA_PARSED"
         fi
 
         # Add a new entry for the repository in report.json
